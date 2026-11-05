@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import io
 import os
+import re
 import secrets
 import sqlite3
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -29,11 +31,20 @@ from .auth import (
     get_current_user,
     hash_password,
     require_doctor,
+    require_examiner,
     require_patient,
     revoke_access_token,
     verify_password,
 )
-from .config import CORS_ORIGINS, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, PRIVATE_REPORTS_DIR
+from .config import (
+    ALLOWED_EMAIL_DOMAINS,
+    CORS_ORIGINS,
+    LOGIN_LOCKOUT_SECONDS,
+    LOGIN_MAX_FAILED_ATTEMPTS,
+    MAX_UPLOAD_BYTES,
+    MAX_UPLOAD_MB,
+    PRIVATE_REPORTS_DIR,
+)
 from .database import get_db, init_db, utc_now_iso
 from .schemas import (
     DoctorProfileUpdateRequest,
@@ -43,6 +54,57 @@ from .schemas import (
     PatientProfileUpdateRequest,
     PatientRegisterRequest,
 )
+
+# In-memory tracking for failed login attempts (identifier -> list of failed attempt timestamps)
+_FAILED_LOGINS: Dict[str, List[float]] = {}
+_LOCKOUT_UNTIL: Dict[str, float] = {}
+
+PHONE_REGEX = re.compile(r"^\+?[0-9]{7,15}$")
+EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+
+
+def _check_login_rate_limit(ident: str) -> None:
+    now = time.time()
+    lockout = _LOCKOUT_UNTIL.get(ident, 0.0)
+    if lockout > now:
+        remaining = int(lockout - now)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many failed login attempts. Account temporarily locked for {remaining} seconds. Please try again later.",
+        )
+    # Prune failed attempts older than 5 minutes
+    if ident in _FAILED_LOGINS:
+        _FAILED_LOGINS[ident] = [t for t in _FAILED_LOGINS[ident] if (now - t) < 300]
+
+
+def _record_failed_login(ident: str) -> None:
+    now = time.time()
+    attempts = _FAILED_LOGINS.setdefault(ident, [])
+    attempts.append(now)
+    if len(attempts) >= LOGIN_MAX_FAILED_ATTEMPTS:
+        _LOCKOUT_UNTIL[ident] = now + LOGIN_LOCKOUT_SECONDS
+        _FAILED_LOGINS[ident] = []
+
+
+def _record_successful_login(ident: str) -> None:
+    _FAILED_LOGINS.pop(ident, None)
+    _LOCKOUT_UNTIL.pop(ident, None)
+
+
+def _validate_email_domain(email: str) -> None:
+    """Enforces administrator-configured email domain allowlist if configured."""
+    if not ALLOWED_EMAIL_DOMAINS or "*" in ALLOWED_EMAIL_DOMAINS:
+        return
+    parts = email.split("@")
+    if len(parts) != 2:
+        raise HTTPException(status_code=400, detail="Invalid email address format.")
+    domain = parts[1].lower().strip()
+    if domain not in ALLOWED_EMAIL_DOMAINS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Email domain '@{domain}' is not authorized. Allowed domains: {', '.join(ALLOWED_EMAIL_DOMAINS)}",
+        )
+
 
 app = FastAPI(
     title="AAROGYASETU (आरोग्यसेतु) API — Milestone 1",
@@ -142,6 +204,10 @@ def _get_authorized_consultation(
     uid = int(current_user["sub"])
     role = current_user["role"]
 
+    # Examiner has read-only access to all consultations for evaluation purposes
+    if role == "examiner":
+        return cons
+
     if role == "patient" and cons["patient_id"] != uid:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -205,14 +271,30 @@ def register_patient(
     payload: PatientRegisterRequest,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> Dict[str, Any]:
+    full_name = payload.full_name.strip()
     phone = payload.phone.strip()
     email = payload.email.strip().lower() if payload.email and payload.email.strip() else None
+
+    if not full_name:
+        raise HTTPException(status_code=400, detail="Full name is required.")
+    if not PHONE_REGEX.match(phone):
+        raise HTTPException(status_code=400, detail="Invalid phone number format. Must contain 7-15 digits.")
+    if email:
+        if not EMAIL_REGEX.match(email):
+            raise HTTPException(status_code=400, detail="Invalid email address format.")
+        _validate_email_domain(email)
 
     if payload.age is None and not (payload.date_of_birth and payload.date_of_birth.strip()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Please provide either your Age or Date of Birth.",
         )
+    if payload.age is not None and (payload.age < 0 or payload.age > 125):
+        raise HTTPException(status_code=400, detail="Age must be between 0 and 125 years.")
+
+    emg_phone = payload.emergency_contact_phone.strip()
+    if not PHONE_REGEX.match(emg_phone):
+        raise HTTPException(status_code=400, detail="Emergency contact phone must contain 7-15 digits.")
 
     cur = conn.cursor()
     cur.execute("SELECT id FROM users WHERE phone = ?", (phone,))
@@ -237,7 +319,7 @@ def register_patient(
         VALUES ('patient', ?, ?, ?, ?, 'approved', 0, ?)
         """,
         (
-            payload.full_name.strip(),
+            full_name,
             phone,
             email,
             hash_password(payload.password),
@@ -261,7 +343,7 @@ def register_patient(
             (payload.gender or "").strip(),
             payload.village_or_address.strip(),
             payload.emergency_contact_name.strip(),
-            payload.emergency_contact_phone.strip(),
+            emg_phone,
             now,
         ),
     )
@@ -335,8 +417,17 @@ def register_doctor(
     Doctor self-registration creates a 'pending' account that cannot access any patient
     data until approved by an administrator.
     """
+    full_name = payload.full_name.strip()
     phone = payload.phone.strip()
     email = payload.email.strip().lower()
+
+    if not full_name:
+        raise HTTPException(status_code=400, detail="Doctor full name is required.")
+    if not PHONE_REGEX.match(phone):
+        raise HTTPException(status_code=400, detail="Invalid phone number format. Must contain 7-15 digits.")
+    if not EMAIL_REGEX.match(email):
+        raise HTTPException(status_code=400, detail="Invalid doctor email address format.")
+    _validate_email_domain(email)
 
     cur = conn.cursor()
     cur.execute("SELECT id FROM users WHERE phone = ? OR lower(email) = ?", (phone, email))
@@ -353,7 +444,7 @@ def register_doctor(
         VALUES ('doctor', ?, ?, ?, ?, 'pending', 0, ?)
         """,
         (
-            payload.full_name.strip(),
+            full_name,
             phone,
             email,
             hash_password(payload.password),
@@ -398,28 +489,46 @@ def login(
     payload: LoginRequest,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> Dict[str, Any]:
-    ident = payload.identifier.strip()
+    ident = payload.identifier.strip().lower()
+    if not ident:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email or phone number is required.",
+        )
+
+    # Rate limiting & temporary lockout check
+    _check_login_rate_limit(ident)
+
     cur = conn.cursor()
     cur.execute(
         """
         SELECT id, role, full_name, phone, email, password_hash, approval_status
         FROM users
-        WHERE phone = ? OR lower(email) = lower(?)
+        WHERE phone = ? OR lower(email) = ?
         """,
         (ident, ident),
     )
     row = cur.fetchone()
+
+    # Generic credential failure message so the sign-in page never reveals account existence
     if not row or not verify_password(payload.password, row["password_hash"]):
+        _record_failed_login(ident)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid phone/email or password.",
+            detail="Email or password is incorrect.",
         )
 
     if payload.role and row["role"] != payload.role:
-        portal_label = "Doctor Portal" if payload.role == "doctor" else "Patient Portal"
+        _record_failed_login(ident)
+        portal_labels = {
+            "doctor": "Doctor Portal",
+            "patient": "Patient Portal",
+            "examiner": "Examiner Portal",
+        }
+        portal_label = portal_labels.get(payload.role, "portal")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"This account belongs to a {row['role']}. Please switch role tabs to sign in to the {portal_label}.",
+            detail=f"This account belongs to a {row['role']}. Please switch to the {row['role'].title()} tab to sign in.",
         )
 
     if row["role"] == "doctor" and row["approval_status"] != "approved":
@@ -431,6 +540,7 @@ def login(
             ),
         )
 
+    _record_successful_login(ident)
     user_id = row["id"]
     token = create_access_token(
         user_id=user_id,
@@ -623,7 +733,49 @@ def list_my_authorized_consultations(
         return list_patient_consultations(current_user=current_user, conn=conn)
     if current_user.get("role") == "doctor":
         return list_doctor_consultations(current_user=require_doctor(current_user), conn=conn)
+    if current_user.get("role") == "examiner":
+        return list_examiner_consultations(current_user=require_examiner(current_user), conn=conn)
     raise HTTPException(status_code=403, detail="Unauthorized role.")
+
+
+@app.get("/api/consultations/examiner", tags=["Consultations"])
+def list_examiner_consultations(
+    current_user: Dict[str, Any] = Depends(require_examiner),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    """
+    Read-only examiner view of all consultations across the platform for hackathon review.
+    Fictional demo data only.
+    """
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT
+            c.*,
+            p.full_name AS patient_name,
+            p.phone AS patient_phone,
+            p.email AS patient_email,
+            pp.age AS patient_age,
+            pp.date_of_birth AS patient_dob,
+            pp.gender AS patient_gender,
+            pp.village_or_address AS patient_village,
+            pp.emergency_contact_name AS patient_emergency_name,
+            pp.emergency_contact_phone AS patient_emergency_phone,
+            d.full_name AS doctor_name,
+            d.phone AS doctor_phone,
+            d.email AS doctor_email,
+            dp.specialty AS doctor_specialty,
+            dp.clinic_name AS doctor_clinic_name,
+            dp.clinic_location AS doctor_clinic_location
+        FROM consultations c
+        JOIN users p ON c.patient_id = p.id
+        LEFT JOIN patient_profiles pp ON p.id = pp.user_id
+        JOIN users d ON c.doctor_id = d.id
+        LEFT JOIN doctor_profiles dp ON d.id = dp.user_id
+        ORDER BY c.id ASC
+        """
+    )
+    return [_format_consultation_summary(conn, row) for row in cur.fetchall()]
 
 
 @app.get("/api/consultations/patient", tags=["Consultations"])
@@ -737,6 +889,11 @@ def send_consultation_message(
     current_user: Dict[str, Any] = Depends(get_current_user),
     conn: sqlite3.Connection = Depends(get_db),
 ) -> Dict[str, Any]:
+    if current_user.get("role") == "examiner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Read-only access: Examiner account cannot send messages or modify consultation data.",
+        )
     _get_authorized_consultation(conn, consultation_id, current_user)
     content = payload.content.strip()
     if not content:
@@ -991,6 +1148,11 @@ def download_authorized_report_file(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: Doctors can view reports only for their assigned consultations.",
             )
+    if role not in ("patient", "doctor", "examiner"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
 
     file_path = PRIVATE_REPORTS_DIR / rep["stored_filename"]
     if not file_path.exists():

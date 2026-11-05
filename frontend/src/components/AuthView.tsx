@@ -57,9 +57,12 @@ export const AuthView: React.FC<AuthViewProps> = ({
     if (nextRole === 'patient') {
       setIdentifier('9876543210');
       setPassword('patient123');
-    } else {
+    } else if (nextRole === 'doctor') {
       setIdentifier('9123456780');
       setPassword('doctor123');
+    } else {
+      setIdentifier('9900112233');
+      setPassword('examiner123');
     }
   };
 
@@ -181,6 +184,13 @@ export const AuthView: React.FC<AuthViewProps> = ({
         >
           Doctor Portal
         </button>
+        <button
+          type="button"
+          className={`tab-btn ${roleTab === 'examiner' ? 'active' : ''}`}
+          onClick={() => switchRole('examiner')}
+        >
+          Examiner Portal
+        </button>
       </div>
 
       <div className="card">
@@ -191,30 +201,36 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 ? mode === 'signin'
                   ? 'Patient Sign-In'
                   : 'New Patient Registration'
-                : mode === 'signin'
-                ? 'Doctor Portal Sign-In'
-                : 'Doctor Self-Registration (Pending Approval)'}
+                : roleTab === 'doctor'
+                ? mode === 'signin'
+                  ? 'Doctor Portal Sign-In'
+                  : 'Doctor Self-Registration (Pending Approval)'
+                : 'AIORA Hackathon Examiner Sign-In'}
             </h3>
             <p className="card-subtitle">
               {roleTab === 'patient'
                 ? 'Access your rural profile, assigned doctor consultation, and medical reports.'
-                : 'Dedicated clinician portal restricted to assigned patient consultations.'}
+                : roleTab === 'doctor'
+                ? 'Dedicated clinician portal restricted to assigned patient consultations.'
+                : 'Read-only evaluation access to review fictional demo consultations and reports.'}
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setMode(mode === 'signin' ? 'register' : 'signin');
-              setErrorMsg(null);
-            }}
-          >
-            {mode === 'signin'
-              ? roleTab === 'patient'
-                ? 'Create Patient Account'
-                : 'Doctor Registration'
-              : 'Back to Sign-In'}
-          </button>
+          {roleTab !== 'examiner' && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                setMode(mode === 'signin' ? 'register' : 'signin');
+                setErrorMsg(null);
+              }}
+            >
+              {mode === 'signin'
+                ? roleTab === 'patient'
+                  ? 'Create Patient Account'
+                  : 'Doctor Registration'
+                : 'Back to Sign-In'}
+            </button>
+          )}
         </div>
 
         {errorMsg && <div className="alert alert-error">{errorMsg}</div>}
@@ -240,7 +256,9 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 placeholder={
                   roleTab === 'patient'
                     ? 'e.g. 9876543210'
-                    : 'e.g. 9123456780 or dr.priya@aarogyasetu.local'
+                    : roleTab === 'doctor'
+                    ? 'e.g. 9123456780 or dr.priya@aarogyasetu.local'
+                    : 'e.g. examiner@aiora.karavali.edu or 9900112233'
                 }
                 required
               />
@@ -269,7 +287,9 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 ? 'Signing In...'
                 : roleTab === 'patient'
                 ? 'Sign In to Patient Portal'
-                : 'Sign In to Doctor Portal'}
+                : roleTab === 'doctor'
+                ? 'Sign In to Doctor Portal'
+                : 'Sign In to Examiner Portal (Read-Only)'}
             </button>
 
             {/* Demo Credentials Box */}
@@ -290,12 +310,16 @@ export const AuthView: React.FC<AuthViewProps> = ({
                   <strong>
                     {roleTab === 'patient'
                       ? 'Demo Patient Account (Fictional):'
-                      : 'Seeded Demo Doctor Account (Fictional):'}
+                      : roleTab === 'doctor'
+                      ? 'Seeded Demo Doctor Account (Fictional):'
+                      : 'AIORA Hackathon Examiner Account (Read-Only):'}
                   </strong>
                   <div style={{ fontSize: '0.8rem', marginTop: 2 }}>
                     {roleTab === 'patient'
                       ? 'Ramesh Kumar • Phone: 9876543210 • Password: patient123'
-                      : 'Dr. Priya Sharma • Phone: 9123456780 • Password: doctor123'}
+                      : roleTab === 'doctor'
+                      ? 'Dr. Priya Sharma • Phone: 9123456780 • Password: doctor123'
+                      : 'AIORA Examiner • Phone: 9900112233 / examiner@aiora.karavali.edu • Password: examiner123'}
                   </div>
                 </div>
                 <button
@@ -305,9 +329,12 @@ export const AuthView: React.FC<AuthViewProps> = ({
                     if (roleTab === 'patient') {
                       setIdentifier('9876543210');
                       setPassword('patient123');
-                    } else {
+                    } else if (roleTab === 'doctor') {
                       setIdentifier('9123456780');
                       setPassword('doctor123');
+                    } else {
+                      setIdentifier('9900112233');
+                      setPassword('examiner123');
                     }
                   }}
                 >

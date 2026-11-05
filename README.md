@@ -79,14 +79,27 @@ d:\PROJECT\
 
 ## 3. Seeded Fictional Demo Credentials
 
-The database seeds a ready-to-test consultation (`CONS-101`) with sample messages and a sample compressed blood test report:
+The database seeds ready-to-test consultations (`CONS-101` and `CONS-102`) with sample messages and a sample compressed blood test report:
 
-| Portal Role | Full Name | Phone / Identifier | Email | Password | Assigned Consultation |
+| Portal Role | Full Name | Phone / Identifier | Email | Password | Access Level & Scope |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Patient** | **Ramesh Kumar** | `9876543210` | `ramesh.demo@aarogyasetu.local` | `patient123` | `CONS-101` (Assigned to Dr. Priya Sharma) |
-| **Doctor** | **Dr. Priya Sharma** | `9123456780` | `dr.priya@aarogyasetu.local` | `doctor123` | `CONS-101` (Assigned to Ramesh Kumar) |
+| **Patient** | **Ramesh Kumar** | `9876543210` | `ramesh.demo@aarogyasetu.local` | `patient123` | Patient Portal: `CONS-101` (Assigned to Dr. Priya Sharma) |
+| **Doctor** | **Dr. Priya Sharma** | `9123456780` | `dr.priya@aarogyasetu.local` | `doctor123` | Doctor Portal: Assigned patient consultations only (`CONS-101`) |
+| **Examiner** | **AIORA Hackathon Examiner** | `9900112233` | `examiner@aiora.karavali.edu` | `examiner123` | **Examiner Portal (Read-Only Audit)**: Platform-wide consultation & report review (mutations blocked) |
 
-*(A second fictional patient `Sunita Devi` assigned to a different doctor `Dr. Vikram Rao` is also seeded in SQLite so automated tests and evaluators can verify that Dr. Priya Sharma cannot view unassigned patients.)*
+> **Examiner Note (Demo-Only):** The Examiner account is seeded strictly for evaluation. There is no public Examiner registration form. All data displayed is fictional demo data. Attempts by the Examiner account to send messages, modify profiles, or upload reports are blocked with HTTP `403 Forbidden`.
+
+*(A second fictional patient `Sunita Devi` assigned to `Dr. Vikram Rao` is also seeded in SQLite so evaluators can verify that `Dr. Priya Sharma` cannot view or access unassigned patients.)*
+
+---
+
+## 4. Authentication, Registration & Domain Validation Rules
+
+- **Database-Connected Login Rule:** Users may sign in only when their normalized email or phone number matches an existing database account, the password matches the PBKDF2 hash, and the account is active/approved for that role.
+- **Unregistered Email / Random Gmail Blocking:** Unregistered email addresses (including arbitrary `@gmail.com` addresses) are rejected with a generic `401 Unauthorized` error (`"Email or password is incorrect"`). Accounts are never automatically created upon login.
+- **Email Domain Policy (`AAROGYASETU_ALLOWED_EMAIL_DOMAINS`):** By default, `*` is configured so that any valid email domain (including Gmail) can be registered. If the institution restricts registrations to an approved domain (e.g. `kit.edu.in,karavali.edu.in`), the administrator sets `AAROGYASETU_ALLOWED_EMAIL_DOMAINS` in the `.env` configuration.
+- **Rate Limiting & Temporary Lockout:** After 5 consecutive failed login attempts on the same identifier within 5 minutes, the account is temporarily locked for 10 minutes (`429 Too Many Requests`).
+- **Data Trimming & Format Validation:** Phone numbers (7–15 digits) and emails are strictly validated with regular expressions on both frontend and backend. Rejected submissions are never saved to SQLite.
 
 ---
 

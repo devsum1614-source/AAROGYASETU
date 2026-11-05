@@ -156,3 +156,13 @@ def require_doctor(user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str
             detail="Doctor account is pending administrator approval and cannot access patient consultations yet.",
         )
     return user
+
+
+def require_examiner(user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+    if user.get("role") != "examiner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access restricted to Examiner accounts.",
+        )
+    return user
+

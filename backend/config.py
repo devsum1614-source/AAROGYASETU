@@ -47,6 +47,19 @@ else:
 MAX_UPLOAD_MB: int = int(os.environ.get("AAROGYASETU_MAX_UPLOAD_MB", "5"))
 MAX_UPLOAD_BYTES: int = MAX_UPLOAD_MB * 1024 * 1024
 
+# Allowed email domains configuration (Comma-separated, e.g. "kit.edu.in,karavali.edu.in" or "*" to allow any valid email domain)
+# If empty or "*", all domains (including gmail.com) are accepted upon valid registration.
+ALLOWED_EMAIL_DOMAINS: list[str] = [
+    d.strip().lower()
+    for d in os.environ.get("AAROGYASETU_ALLOWED_EMAIL_DOMAINS", "*").split(",")
+    if d.strip()
+]
+
+# Failed login attempts rate limiting / temporary lockout parameters
+# Max 5 failed attempts per identifier within a 5-minute rolling window before a 10-minute lockout
+LOGIN_MAX_FAILED_ATTEMPTS: int = int(os.environ.get("AAROGYASETU_MAX_FAILED_LOGINS", "5"))
+LOGIN_LOCKOUT_SECONDS: int = int(os.environ.get("AAROGYASETU_LOGIN_LOCKOUT_SECONDS", str(10 * 60)))
+
 CORS_ORIGINS: list[str] = [
     origin.strip()
     for origin in os.environ.get(

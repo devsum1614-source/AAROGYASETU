@@ -264,3 +264,107 @@ def test_patient_registration_and_logout_session_revocation():
     conn.commit()
     conn.close()
 
+
+def test_login_validation_rules_and_unregistered_gmail_rejection():
+    # 1. Arbitrary / unregistered Gmail must NOT sign in
+    unreg_res = client.post(
+        "/api/auth/login",
+        json={"identifier": "random.unregistered.user@gmail.com", "password": "password123", "role": "patient"},
+    )
+    assert unreg_res.status_code == 401
+    assert "incorrect" in unreg_res.json()["detail"].lower()
+
+    # 2. Registered patient Ramesh Kumar signs in with correct credentials
+    login_res = client.post(
+        "/api/auth/login",
+        json={"identifier": "9876543210", "password": "patient123", "role": "patient"},
+    )
+    assert login_res.status_code == 200
+    assert login_res.json()["user"]["role"] == "patient"
+
+    # 3. Switching role tab mismatch fails (e.g. attempting doctor login with patient credentials)
+    mismatch_res = client.post(
+        "/api/auth/login",
+        json={"identifier": "9876543210", "password": "patient123", "role": "doctor"},
+    )
+    assert mismatch_res.status_code == 403
+
+
+def test_examiner_read_only_access_and_mutation_blocking():
+    # 1. Login as seeded Examiner demo account
+    ex_login = client.post(
+        "/api/auth/login",
+        json={"identifier": "examiner@aiora.karavali.edu", "password": "examiner123", "role": "examiner"},
+    )
+    assert ex_login.status_code == 200
+    ex_token = ex_login.json()["access_token"]
+    ex_headers = {"Authorization": f"Bearer {ex_token}"}
+
+    # 2. Examiner can read platform consultations
+    cons_res = client.get("/api/consultations/examiner", headers=ex_headers)
+    assert cons_res.status_code == 200
+    assert len(cons_res.json()) >= 2
+
+    # 3. Examiner can read messages in consultation 1
+    msgs_res = client.get("/api/consultations/1/messages", headers=ex_headers)
+    assert msgs_res.status_code == 200
+    assert len(msgs_res.json()) >= 1
+
+    # 4. Examiner CANNOT send messages (mutations blocked with 403)
+    send_res = client.post(
+        "/api/consultations/1/messages",
+        headers=ex_headers,
+        json={"content": "Examiner evaluation note attempt"},
+    )
+    assert send_res.status_code == 403
+    assert "read-only" in send_res.json()["detail"].lower()
+
+    # 5. Examiner CANNOT update patient or doctor profiles
+    upd_pat_res = client.put(
+        "/api/profile/patient",
+        headers=ex_headers,
+        json={
+            "full_name": "Tampered Name",
+            "phone": "9876543210",
+            "village_or_address": "Test Village",
+            "emergency_contact_name": "Test Contact",
+            "emergency_contact_phone": "9876500001",
+        },
+    )
+    assert upd_pat_res.status_code == 403
+
+
+def test_registration_validation_and_malformed_rejection():
+    # 1. Reject invalid phone format (letters in phone)
+    bad_phone_res = client.post(
+        "/api/auth/register/patient",
+        json={
+            "full_name": "Bad Phone User",
+            "phone": "not-a-number",
+            "email": "valid@gmail.com",
+            "password": "password123",
+            "age": 25,
+            "village_or_address": "Test Village",
+            "emergency_contact_name": "Test Contact",
+            "emergency_contact_phone": "9876543210",
+        },
+    )
+    assert bad_phone_res.status_code in (400, 422)
+
+    # 2. Reject invalid email format
+    bad_email_res = client.post(
+        "/api/auth/register/patient",
+        json={
+            "full_name": "Bad Email User",
+            "phone": "9555112233",
+            "email": "not-an-email-at-all",
+            "password": "password123",
+            "age": 25,
+            "village_or_address": "Test Village",
+            "emergency_contact_name": "Test Contact",
+            "emergency_contact_phone": "9876543210",
+        },
+    )
+    assert bad_email_res.status_code in (400, 422)
+
+

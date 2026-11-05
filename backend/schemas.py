@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 class LoginRequest(BaseModel):
     identifier: str = Field(..., min_length=3, max_length=120, description="Phone number or email address")
     password: str = Field(..., min_length=4, max_length=128)
-    role: Optional[Literal["patient", "doctor"]] = None
+    role: Optional[Literal["patient", "doctor", "examiner"]] = None
 
 
 class PatientRegisterRequest(BaseModel):

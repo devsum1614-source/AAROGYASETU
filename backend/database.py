@@ -41,7 +41,7 @@ def get_db() -> Generator[sqlite3.Connection, None, None]:
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    role TEXT NOT NULL CHECK (role IN ('patient', 'doctor')),
+    role TEXT NOT NULL CHECK (role IN ('patient', 'doctor', 'examiner')),
     full_name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
     email TEXT UNIQUE,
@@ -190,8 +190,28 @@ def init_db() -> None:
     conn.executescript(SCHEMA_SQL)
 
     cur = conn.cursor()
+
+    # Ensure the seeded Examiner account exists even if users table was already created
+    now = utc_now_iso()
+    cur.execute("SELECT id FROM users WHERE role = 'examiner'")
+    if not cur.fetchone():
+        cur.execute(
+            """
+            INSERT INTO users (role, full_name, phone, email, password_hash, approval_status, is_demo, created_at)
+            VALUES ('examiner', ?, ?, ?, ?, 'approved', 1, ?)
+            """,
+            (
+                "AIORA Hackathon Examiner",
+                "9900112233",
+                "examiner@aiora.karavali.edu",
+                hash_password("examiner123"),
+                now,
+            ),
+        )
+        conn.commit()
+
     cur.execute("SELECT COUNT(*) AS cnt FROM users")
-    if cur.fetchone()["cnt"] > 0:
+    if cur.fetchone()["cnt"] > 1:
         conn.close()
         return
 
@@ -328,6 +348,23 @@ def init_db() -> None:
             now,
         ),
     )
+
+    # 5. Seed Read-Only Fictional Examiner Demo Account (for AIORA Hackathon Evaluation)
+    cur.execute("SELECT id FROM users WHERE role = 'examiner'")
+    if not cur.fetchone():
+        cur.execute(
+            """
+            INSERT INTO users (role, full_name, phone, email, password_hash, approval_status, is_demo, created_at)
+            VALUES ('examiner', ?, ?, ?, ?, 'approved', 1, ?)
+            """,
+            (
+                "AIORA Hackathon Examiner",
+                "9900112233",
+                "examiner@aiora.karavali.edu",
+                hash_password("examiner123"),
+                now,
+            ),
+        )
 
     # 5. Seed Assigned Consultation between Ramesh Kumar & Dr. Priya Sharma
     cur.execute(

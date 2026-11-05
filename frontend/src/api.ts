@@ -168,6 +168,15 @@ export async function fetchDoctorConsultationsApi(
   return handleJsonResponse(res);
 }
 
+export async function fetchExaminerConsultationsApi(
+  token: string
+): Promise<Consultation[]> {
+  const res = await fetch(`${API_BASE}/api/consultations/examiner`, {
+    headers: getAuthHeaders(token),
+  });
+  return handleJsonResponse(res);
+}
+
 export async function fetchConsultationMessagesApi(
   token: string,
   consultationId: number,
