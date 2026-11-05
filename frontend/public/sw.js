@@ -1,11 +1,11 @@
 /**
- * AAROGYASETU (आरोग्यसेतु) Service Worker — Milestone 1
+ * AAROGYASETU (आरोग्यसेतु) Service Worker
  * Privacy & Security Rule:
  *   Caches ONLY the static application shell (HTML, CSS, JS, manifest, and app icons).
  *   NEVER caches /api/* requests, medical reports, patient profiles, or consultation messages.
  */
 
-const CACHE_NAME = 'aarogyasetu-app-shell-v1';
+const CACHE_NAME = 'aarogyasetu-app-shell-v2';
 const APP_SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -43,9 +43,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // STRICT PRIVACY GUARD: Never cache any API route, medical report, profile, or message
+  // Skip Vite dev HMR and dynamic API/PHI endpoints
   if (
     url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/@vite') ||
+    url.pathname.startsWith('/@react-refresh') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/') ||
     url.pathname.includes('/reports/') ||
     url.pathname.includes('/messages') ||
     url.pathname.includes('/profile') ||
@@ -59,10 +63,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests fall back to cached /index.html when offline
+  // Navigation requests: network-first, updating cached /index.html on success
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match('/index.html'))
     );
     return;
   }

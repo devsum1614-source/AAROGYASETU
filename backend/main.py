@@ -91,7 +91,8 @@ app = FastAPI(
 app.add_middleware(GZipMiddleware, minimum_size=400)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS if CORS_ORIGINS else ["*"],
+    allow_origins=CORS_ORIGINS if CORS_ORIGINS and "*" not in CORS_ORIGINS else [],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -635,10 +636,11 @@ def login(
             detail=f"This account belongs to a {row['role']}. Please switch to the {row['role'].title()} tab to sign in.",
         )
 
-    if row["role"] == "doctor" and row["approval_status"] != "approved":
+    approval_status = row["approval_status"]
+    if row["role"] == "doctor" and approval_status != "approved":
         cur.execute("UPDATE users SET approval_status = 'approved' WHERE id = ?", (row["id"],))
         conn.commit()
-        row["approval_status"] = "approved"
+        approval_status = "approved"
 
     _record_successful_login(ident)
     user_id = row["id"]
@@ -647,7 +649,7 @@ def login(
         phone=row["phone"],
         role=row["role"],
         full_name=row["full_name"],
-        approval_status=row["approval_status"],
+        approval_status=approval_status,
     )
     return {
         "access_token": token,
