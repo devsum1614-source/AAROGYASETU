@@ -327,7 +327,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 <>
                   <div>
                     <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0b1f3a' }}>
-                      Demo Patient (Patient Portal Only)
+                      Demo Patient
                     </div>
                     <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                       Ramesh Kumar • Phone: <code>9876543210</code> • Password: <code>patient123</code>
@@ -346,7 +346,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 <>
                   <div>
                     <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0b1f3a' }}>
-                      Demo Doctor (Doctor Portal Only)
+                      Demo Doctor
                     </div>
                     <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                       Dr. Priya Sharma • Phone: <code>9123456780</code> • Password: <code>doctor123</code>
