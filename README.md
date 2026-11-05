@@ -4,6 +4,12 @@
 **Institution:** Karavali Institute of Technology  
 **Deliverable:** Full Telemedicine Progressive Web App (PWA) Implementation
 
+## 🌐 Live Website Link (Open on Any Mobile or Desktop from Any Network)
+👉 **[Click Here to Open Live AAROGYASETU Website: https://devsum1614-source.github.io/AAROGYASETU/](https://devsum1614-source.github.io/AAROGYASETU/)**
+
+- **Patient Portal Demo:** `9876543210` / `patient123` *(or click `+ New Patient? Register Here` to create your own account)*
+- **Doctor Portal Demo:** `9123456780` / `doctor123` *(or click `+ New Doctor? Register Here` to create your own account)*
+
 ---
 
 ## 1. Project Overview & Blueprint Modules

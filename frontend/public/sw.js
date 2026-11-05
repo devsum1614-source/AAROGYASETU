@@ -5,14 +5,14 @@
  *   NEVER caches /api/* requests, medical reports, patient profiles, or consultation messages.
  */
 
-const CACHE_NAME = 'aarogyasetu-app-shell-v2';
+const CACHE_NAME = 'aarogyasetu-app-shell-v3';
 const APP_SHELL_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon.svg',
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './icon.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -63,18 +63,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: network-first, updating cached /index.html on success
+  // Navigation requests: network-first, updating cached ./index.html on success
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
           if (response && response.status === 200) {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
           }
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
