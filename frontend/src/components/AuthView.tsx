@@ -57,6 +57,9 @@ export const AuthView: React.FC<AuthViewProps> = ({
 
   const switchRole = (nextRole: 'patient' | 'doctor') => {
     setRoleTab(nextRole);
+    setMode('signin');
+    setIdentifier('');
+    setPassword('');
     setErrorMsg(null);
     setSuccessNotice(null);
   };
@@ -305,7 +308,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 : 'Sign In to Doctor Portal'}
             </button>
 
-            {/* Quick Demo Pre-fill Links for convenience */}
+            {/* Quick Demo Pre-fill Scoped Strictly to Selected Portal */}
             <div
               style={{
                 marginTop: 18,
@@ -320,27 +323,45 @@ export const AuthView: React.FC<AuthViewProps> = ({
                 gap: 8,
               }}
             >
-              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                Need sample credentials to test?
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.78rem' }}
-                  onClick={fillDemoPatient}
-                >
-                  Demo Patient
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  style={{ fontSize: '0.78rem' }}
-                  onClick={fillDemoDoctor}
-                >
-                  Demo Doctor
-                </button>
-              </div>
+              {roleTab === 'patient' ? (
+                <>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0b1f3a' }}>
+                      Demo Patient (Patient Portal Only)
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      Ramesh Kumar • Phone: <code>9876543210</code> • Password: <code>patient123</code>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.78rem' }}
+                    onClick={fillDemoPatient}
+                  >
+                    Demo Patient
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#0b1f3a' }}>
+                      Demo Doctor (Doctor Portal Only)
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      Dr. Priya Sharma • Phone: <code>9123456780</code> • Password: <code>doctor123</code>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.78rem' }}
+                    onClick={fillDemoDoctor}
+                  >
+                    Demo Doctor
+                  </button>
+                </>
+              )}
             </div>
           </form>
         ) : roleTab === 'patient' ? (
