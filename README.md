@@ -4,8 +4,6 @@
 **Institution:** Karavali Institute of Technology  
 **Deliverable:** Full Telemedicine Progressive Web App (PWA) Implementation
 
-> **Prototype & Fictional Data Disclaimer:** This application is a hackathon prototype built for demonstration and educational evaluation. It uses **fictional demo data only** and is **not production-ready for real medical records or clinical care**.
-
 ---
 
 ## 1. Project Overview & Blueprint Modules
@@ -13,47 +11,44 @@
 AAROGYASETU is an installable, mobile-first telemedicine Progressive Web App designed for rural and low-connectivity environments (2G/3G networks). Built with **React 18 + TypeScript + Vite** on the frontend, **Python FastAPI** on the backend, **SQLite** for local storage, and **HTML5 Canvas compression**.
 
 ### Implemented Modules:
-1. **Patient Registration, Login & Detailed Clinical Profile:** Demographics, village/town, blood group, known allergies, chronic conditions, emergency contact, manual landmark, and SMS consent.
-2. **Doctor Portal & Records:** Credentials (registration number, specialty, qualifications, clinic location, languages spoken, bio), weekly availability slots manager, and pending medical council review flow with demo quick-approval.
-3. **Examiner Access (Read-Only Audit Mode):** Dedicated seeded Examiner account for AIORA hackathon evaluation. Full platform audit across appointments, SMS logs, reports, consultation notes, medicine schedules, and QR tokens with all mutations strictly blocked.
-4. **Appointment Management & Zero-PHI SMS Engine:** Slot booking, status state-machine (`requested`, `confirmed`, `rescheduled`, `cancelled`, `completed`), deduplication keys, and zero-PHI SMS notifications (Twilio integration or Demo SMS Outbox) that transmit no symptoms, diagnoses, or drug names.
-5. **Consultation Messaging Workspace:** Real-time authorized consultation chat, read/delivered indicators, and low-bandwidth clinical quick-reply chips.
-6. **Smart OCR Laboratory Report Review:** Client-side canvas image compression, side-by-side report viewer, machine-read disclaimer banner (*"Machine-Read — May Be Incomplete — Requires Doctor Review"*), editable parameter table, and doctor review sign-off.
-7. **Clinical Consultation Notes:** Digitally signed clinical diagnoses, dietary and care advice, emergency red-flag triggers, and recommended follow-up dates.
-8. **Doctor-Approved Medicine Schedules & Adherence:** Prescription builder (medicine, dose, morning/afternoon/night slots, meal timing, duration), patient dose check-in, and adherence percentage scoring.
-9. **Tokenized QR Emergency Profile:** Ephemeral tokenized QR profile containing zero raw PHI in the barcode, configurable validity, and one-tap instant revocation.
-10. **Emergency SOS & PHC Directory:** One-tap `CALL 108` emergency dialer, family emergency contact dialer, GPS/landmark coordinates, local 24x7 PHCs directory, and prominent **"No Auto-Dispatch"** legal warning banner.
-11. **Bilingual Navigation & 2G Telemetry:** English (`EN`) and Hindi (`हिंदी`) navigation toggle, 2G Data Saver mode, and static PWA Service Worker caching.
+1. **Patient Registration, Login & Detailed Clinical Profile:** Any new user can register and sign in immediately with their phone number or email. Collects demographics, village/town, blood group, known allergies, chronic conditions, emergency contact, manual landmark, and SMS consent.
+2. **Doctor Portal & Records:** Instant registration and sign-in for doctors with credentials (registration number, specialty, qualifications, clinic location, languages spoken, bio) and weekly availability slots manager.
+3. **Appointment Management & Zero-PHI SMS Engine:** Slot booking, status state-machine (`requested`, `confirmed`, `rescheduled`, `cancelled`, `completed`), deduplication keys, and zero-PHI SMS notifications (Twilio integration or Demo SMS Outbox) that transmit no symptoms, diagnoses, or drug names.
+4. **Consultation Messaging Workspace:** Real-time authorized consultation chat, read/delivered indicators, and low-bandwidth clinical quick-reply chips.
+5. **Smart OCR Laboratory Report Review:** Client-side canvas image compression, side-by-side report viewer, machine-read disclaimer banner (*"Machine-Read — May Be Incomplete — Requires Doctor Review"*), editable parameter table, and doctor review sign-off.
+6. **Clinical Consultation Notes:** Digitally signed clinical diagnoses, dietary and care advice, emergency red-flag triggers, and recommended follow-up dates.
+7. **Doctor-Approved Medicine Schedules & Adherence:** Prescription builder (medicine, dose, morning/afternoon/night slots, meal timing, duration), patient dose check-in, and adherence percentage scoring.
+8. **Tokenized QR Emergency Profile:** Ephemeral tokenized QR profile containing zero raw PHI in the barcode, configurable validity, and one-tap instant revocation.
+9. **Emergency SOS & PHC Directory:** One-tap `CALL 108` emergency dialer, family emergency contact dialer, GPS/landmark coordinates, local 24x7 PHCs directory, and prominent **"No Auto-Dispatch"** legal warning banner.
+10. **Bilingual Navigation & 2G Telemetry:** English (`EN`) and Hindi (`हिंदी`) navigation toggle, 2G Data Saver mode, and static PWA Service Worker caching.
 
 ---
 
-## 2. Seeded Fictional Demo Credentials
+## 2. User Registration & Sample Credentials
 
-The local database seeds ready-to-test fictional accounts for evaluation:
+Any new user can register a **Patient** or **Doctor** account directly from the login page (`+ New Patient? Register Here` / `+ New Doctor? Register Here`) and sign in immediately.
+
+In addition, two sample accounts are pre-seeded for quick testing:
 
 | Role | Full Name | Phone / Identifier | Email | Password | Access Level & Scope |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Patient** | **Ramesh Kumar** | `9876543210` | `ramesh.demo@aarogyasetu.local` | `patient123` | Patient Portal: All patient tabs, appointment booking, medicine reminders, QR profile, SOS |
 | **Doctor** | **Dr. Priya Sharma** | `9123456780` | `dr.priya@aarogyasetu.local` | `doctor123` | Doctor Portal: Triage dashboard, appointment queue, OCR review, clinical notes, medicine prescribing |
-| **Examiner** | **AIORA Hackathon Examiner** | `9900112233` | `examiner@aiora.karavali.edu` | `examiner123` | **Examiner Portal (Read-Only Audit)**: Platform-wide audit across appointments, SMS outbox, OCR reports, clinical notes, and QR tokens (mutations blocked) |
-
-> **Examiner Note (Demo-Only):** The Examiner account is seeded strictly for evaluation. There is no public Examiner registration form. All data displayed is fictional demo data. Attempts by the Examiner account to send messages, modify profiles, or upload reports are blocked with HTTP `403 Forbidden`.
-
-*(A second fictional patient `Sunita Devi` assigned to `Dr. Vikram Rao` is also seeded in SQLite so evaluators can verify that `Dr. Priya Sharma` cannot view or access unassigned patients.)*
 
 ---
 
 ## 3. Authentication, Registration & Domain Validation Rules
 
-- **Database-Connected Login Rule:** Users may sign in only when their normalized email or phone number matches an existing database account, the password matches the PBKDF2 hash, and the account is active/approved for that role.
+- **Database-Connected Login Rule:** Users may sign in only when their normalized email or phone number matches an existing database account and the password matches the PBKDF2 hash.
+- **Instant New User Registration:** Both new patients and new doctors can register their accounts and sign in immediately with their registered phone number or email and password.
 - **Unregistered Email / Random Gmail Blocking:** Unregistered email addresses (including arbitrary `@gmail.com` addresses) are rejected with a generic `401 Unauthorized` error (`"Email or password is incorrect"`). Accounts are never automatically created upon login.
-- **Email Domain Policy (`AAROGYASETU_ALLOWED_EMAIL_DOMAINS`):** By default, `*` is configured so that any valid email domain (including Gmail) can be registered. If the institution restricts registrations to an approved domain (e.g. `kit.edu.in,karavali.edu.in`), the administrator sets `AAROGYASETU_ALLOWED_EMAIL_DOMAINS` in the `.env` configuration.
+- **Email Domain Policy (`AAROGYASETU_ALLOWED_EMAIL_DOMAINS`):** By default, `*` is configured so that any valid email domain (including Gmail) can be registered. If an institution restricts registrations to an approved domain (e.g. `kit.edu.in,karavali.edu.in`), the administrator sets `AAROGYASETU_ALLOWED_EMAIL_DOMAINS` in `.env`.
 - **Rate Limiting & Temporary Lockout:** After 5 consecutive failed login attempts on the same identifier within 5 minutes, the account is temporarily locked for 10 minutes (`429 Too Many Requests`).
-- **Data Trimming & Format Validation:** Phone numbers (7–15 digits) and emails are strictly validated with regular expressions on both frontend and backend. Rejected submissions are never saved to SQLite.
+- **Data Trimming & Format Validation:** Phone numbers (7–15 digits) and emails are strictly validated with regular expressions on both frontend and backend.
 
 ---
 
-## 4. Beginner-Friendly Setup & Run Commands
+## 4. Setup & Run Commands
 
 ### Step 1: Configure Environment Variables (Optional)
 The app works out-of-the-box with safe local defaults. To customize settings, copy `.env.example` to `.env`:
