@@ -2,90 +2,40 @@
 ### “Healthcare Beyond Boundaries”
 **Hackathon:** AIORA  
 **Institution:** Karavali Institute of Technology  
-**Deliverable:** Milestone 1 Working Prototype (Installable Mobile-First Telemedicine PWA)
+**Deliverable:** Full Telemedicine Progressive Web App (PWA) Implementation
 
 > **Prototype & Fictional Data Disclaimer:** This application is a hackathon prototype built for demonstration and educational evaluation. It uses **fictional demo data only** and is **not production-ready for real medical records or clinical care**.
 
 ---
 
-## 1. Implementation Plan & Milestone 1 Scope
+## 1. Project Overview & Blueprint Modules
 
-This first working milestone implements the core foundation end-to-end across a **React + TypeScript + Vite Progressive Web App (PWA)** frontend, a **Python FastAPI** REST API backend, a local **SQLite** database, and **private local file storage**:
+AAROGYASETU is an installable, mobile-first telemedicine Progressive Web App designed for rural and low-connectivity environments (2G/3G networks). Built with **React 18 + TypeScript + Vite** on the frontend, **Python FastAPI** on the backend, **SQLite** for local storage, and **HTML5 Canvas compression**.
 
-| Stage | Module | What Is Implemented in Milestone 1 |
-| :--- | :--- | :--- |
-| **Stage 1** | **Database, Auth & RBAC** | SQLite schema (`users`, `patient_profiles`, `doctor_profiles`, `consultations`, `messages`, `reports`), `PBKDF2-HMAC-SHA256` password hashing, signed bearer tokens, and strict consultation-scoped authorization. |
-| **Stage 2** | **Patient Portal** | Patient registration, sign-in, profile viewer/editor (full name, phone, optional email, age/DOB, gender, village/town/address, emergency contact name & phone), and consultation list. |
-| **Stage 3** | **Doctor Portal** | Separate doctor sign-in, profile editor (full name, phone, email, specialty, clinic name & location, languages spoken, short biography), and assigned patient consultation list (`pending` approval state for self-registered doctors). |
-| **Stage 4** | **Online Messaging** | Text-first consultation messaging stored in SQLite, showing sender, timestamp, and delivery state (`sending`, `sent`, `failed`), periodic 4-second incremental polling, and one-tap **Retry Send** (`client_message_id` deduplication). |
-| **Stage 5** | **Report Upload & Image Compression** | Browser-side HTML5 `<canvas>` compression for JPEG, PNG, and WebP images; displays actual original & compressed sizes, image preview, live upload progress (`0%–100%`), retry option, private storage (`backend/private_reports/`), and permission-checked viewing. |
-| **Stage 6** | **PWA & Low-Bandwidth Shell** | Web App Manifest (`/manifest.json`), app icons, online/offline indicator, and a Service Worker (`/sw.js`) that caches **only the static app shell** and never caches sensitive profiles, messages, or medical reports. |
-
-*Extensibility Note:* Appointment slot booking, SMS updates, AI health assistant, OCR extraction, QR medical sharing, medicine reminders, and Emergency SOS are **not** implemented in Milestone 1. The backend schema and frontend components are modular so those features can be added cleanly in subsequent milestones.
-
----
-
-## 2. Project Folder Structure
-
-```text
-d:\PROJECT\
-├── .env.example                 # Environment variable template for secrets & paths
-├── .gitignore                   # Excludes secrets, SQLite DBs, private uploads, node_modules & build caches
-├── README.md                    # Setup guide, demo credentials, env vars, troubleshooting & PWA steps
-├── start_backend.bat            # One-click script to start FastAPI backend (port 8000)
-├── start_frontend.bat           # One-click script to start Vite PWA dev server (port 5173)
-├── start_aarogyasetu.bat        # Launches both backend and frontend servers
-├── outputs/
-│   ├── AAROGYASETU_Project_Blueprint.pdf  # Visual Project Blueprint PDF
-│   ├── AAROGYASETU_Project_Blueprint.md   # Editable Markdown Blueprint source
-│   └── assets/                            # Original blueprint diagrams & wireframe assets
-├── backend/
-│   ├── __init__.py
-│   ├── config.py                # Environment variable loader & path configuration
-│   ├── auth.py                  # PBKDF2-HMAC-SHA256 password hashing & HMAC bearer tokens
-│   ├── database.py              # SQLite schema & fictional demo data seeder
-│   ├── schemas.py               # Pydantic v2 request/response schemas
-│   ├── main.py                  # FastAPI REST API routes & consultation-scoped RBAC checks
-│   ├── requirements.txt         # Python dependencies
-│   ├── test_milestone1.py       # Automated pytest verification suite
-│   └── private_reports/         # Private report storage (excluded from Git & public static mounts)
-└── frontend/
-    ├── index.html               # App shell HTML with manifest & theme-color meta tags
-    ├── package.json             # React 18, TypeScript & Vite scripts
-    ├── tsconfig.json            # Strict TypeScript compiler configuration
-    ├── vite.config.ts           # Vite dev server & /api proxy to port 8000
-    ├── public/
-    │   ├── manifest.json        # PWA Web App Manifest
-    │   ├── sw.js                # Service Worker (caches static app shell only; never caches PHI)
-    │   ├── icon-192.png         # 192x192 PWA home-screen icon
-    │   ├── icon-512.png         # 512x512 PWA splash/install icon
-    │   └── icon.svg             # Vector app icon
-    └── src/
-        ├── main.tsx             # React entry point & Service Worker registration
-        ├── App.tsx              # Navy Blue header branding, online/offline status & role router
-        ├── api.ts               # Typed REST API client with XMLHttpRequest upload progress
-        ├── types.ts             # TypeScript interfaces
-        ├── styles.css           # Navy Blue, White & Light Grey mobile-first design system
-        ├── components/
-        │   ├── AuthView.tsx              # Welcome, Sign-In & Registration screen
-        │   ├── PatientPortal.tsx         # Patient dashboard, consultations, reports & profile
-        │   ├── DoctorPortal.tsx          # Doctor dashboard, assigned patients & profile
-        │   └── ConsultationWorkspace.tsx # Messaging thread & Canvas image compression uploader
-        └── utils/
-            └── compressImage.ts          # Browser HTML5 Canvas image compression utility
-```
+### Implemented Modules:
+1. **Patient Registration, Login & Detailed Clinical Profile:** Demographics, village/town, blood group, known allergies, chronic conditions, emergency contact, manual landmark, and SMS consent.
+2. **Doctor Portal & Records:** Credentials (registration number, specialty, qualifications, clinic location, languages spoken, bio), weekly availability slots manager, and pending medical council review flow with demo quick-approval.
+3. **Examiner Access (Read-Only Audit Mode):** Dedicated seeded Examiner account for AIORA hackathon evaluation. Full platform audit across appointments, SMS logs, reports, consultation notes, medicine schedules, and QR tokens with all mutations strictly blocked.
+4. **Appointment Management & Zero-PHI SMS Engine:** Slot booking, status state-machine (`requested`, `confirmed`, `rescheduled`, `cancelled`, `completed`), deduplication keys, and zero-PHI SMS notifications (Twilio integration or Demo SMS Outbox) that transmit no symptoms, diagnoses, or drug names.
+5. **Consultation Messaging Workspace:** Real-time authorized consultation chat, read/delivered indicators, and low-bandwidth clinical quick-reply chips.
+6. **Smart OCR Laboratory Report Review:** Client-side canvas image compression, side-by-side report viewer, machine-read disclaimer banner (*"Machine-Read — May Be Incomplete — Requires Doctor Review"*), editable parameter table, and doctor review sign-off.
+7. **Clinical Consultation Notes:** Digitally signed clinical diagnoses, dietary and care advice, emergency red-flag triggers, and recommended follow-up dates.
+8. **Doctor-Approved Medicine Schedules & Adherence:** Prescription builder (medicine, dose, morning/afternoon/night slots, meal timing, duration), patient dose check-in, and adherence percentage scoring.
+9. **Tokenized QR Emergency Profile:** Ephemeral tokenized QR profile containing zero raw PHI in the barcode, configurable validity, and one-tap instant revocation.
+10. **Emergency SOS & PHC Directory:** One-tap `CALL 108` emergency dialer, family emergency contact dialer, GPS/landmark coordinates, local 24x7 PHCs directory, and prominent **"No Auto-Dispatch"** legal warning banner.
+11. **Bilingual Navigation & 2G Telemetry:** English (`EN`) and Hindi (`हिंदी`) navigation toggle, 2G Data Saver mode, and static PWA Service Worker caching.
 
 ---
 
-## 3. Seeded Fictional Demo Credentials
+## 2. Seeded Fictional Demo Credentials
 
-The database seeds ready-to-test consultations (`CONS-101` and `CONS-102`) with sample messages and a sample compressed blood test report:
+The local database seeds ready-to-test fictional accounts for evaluation:
 
-| Portal Role | Full Name | Phone / Identifier | Email | Password | Access Level & Scope |
+| Role | Full Name | Phone / Identifier | Email | Password | Access Level & Scope |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Patient** | **Ramesh Kumar** | `9876543210` | `ramesh.demo@aarogyasetu.local` | `patient123` | Patient Portal: `CONS-101` (Assigned to Dr. Priya Sharma) |
-| **Doctor** | **Dr. Priya Sharma** | `9123456780` | `dr.priya@aarogyasetu.local` | `doctor123` | Doctor Portal: Assigned patient consultations only (`CONS-101`) |
-| **Examiner** | **AIORA Hackathon Examiner** | `9900112233` | `examiner@aiora.karavali.edu` | `examiner123` | **Examiner Portal (Read-Only Audit)**: Platform-wide consultation & report review (mutations blocked) |
+| **Patient** | **Ramesh Kumar** | `9876543210` | `ramesh.demo@aarogyasetu.local` | `patient123` | Patient Portal: All patient tabs, appointment booking, medicine reminders, QR profile, SOS |
+| **Doctor** | **Dr. Priya Sharma** | `9123456780` | `dr.priya@aarogyasetu.local` | `doctor123` | Doctor Portal: Triage dashboard, appointment queue, OCR review, clinical notes, medicine prescribing |
+| **Examiner** | **AIORA Hackathon Examiner** | `9900112233` | `examiner@aiora.karavali.edu` | `examiner123` | **Examiner Portal (Read-Only Audit)**: Platform-wide audit across appointments, SMS outbox, OCR reports, clinical notes, and QR tokens (mutations blocked) |
 
 > **Examiner Note (Demo-Only):** The Examiner account is seeded strictly for evaluation. There is no public Examiner registration form. All data displayed is fictional demo data. Attempts by the Examiner account to send messages, modify profiles, or upload reports are blocked with HTTP `403 Forbidden`.
 
@@ -93,7 +43,7 @@ The database seeds ready-to-test consultations (`CONS-101` and `CONS-102`) with 
 
 ---
 
-## 4. Authentication, Registration & Domain Validation Rules
+## 3. Authentication, Registration & Domain Validation Rules
 
 - **Database-Connected Login Rule:** Users may sign in only when their normalized email or phone number matches an existing database account, the password matches the PBKDF2 hash, and the account is active/approved for that role.
 - **Unregistered Email / Random Gmail Blocking:** Unregistered email addresses (including arbitrary `@gmail.com` addresses) are rejected with a generic `401 Unauthorized` error (`"Email or password is incorrect"`). Accounts are never automatically created upon login.
@@ -130,7 +80,7 @@ npm.cmd run dev
 - Open **`http://localhost:5173`** in your browser.
 - *(Tip: On Windows, you can also double-click `start_aarogyasetu.bat` in `d:\PROJECT` to launch both servers automatically.)*
 
-### Step 4: Run Automated Pytest Verification
+### Step 4: Run Automated Pytest Verification Suite
 ```powershell
 cd d:\PROJECT
 python -m pytest backend/test_milestone1.py -v
@@ -144,38 +94,29 @@ All variables are documented in [`.env.example`](file:///d:/PROJECT/.env.example
 
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
-| `AAROGYASETU_SECRET_KEY` | *(dev fallback)* | Secret key used to sign HMAC-SHA256 authentication bearer tokens. Set a strong secret in `.env`. |
+| `AAROGYASETU_SECRET_KEY` | *(dev fallback)* | Secret key used to sign HMAC-SHA256 authentication bearer tokens. |
 | `AAROGYASETU_DB_PATH` | `backend/aarogyasetu_m1.db` | Path to the local SQLite database file. |
 | `AAROGYASETU_PRIVATE_STORAGE_DIR` | `backend/private_reports` | Directory where uploaded medical reports are stored privately outside static web folders. |
 | `AAROGYASETU_MAX_UPLOAD_MB` | `5` | Maximum allowed file upload size in megabytes (`5 MB`). |
 | `AAROGYASETU_CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated list of allowed frontend origins for CORS. |
-| `VITE_API_BASE_URL` | *(empty — uses `/api` proxy)* | Optional base URL if the frontend is hosted on a separate origin from the backend. |
+| `TWILIO_ACCOUNT_SID` | *(optional)* | Twilio Account SID for live SMS delivery. Leave blank to use the built-in Demo SMS Outbox. |
+| `TWILIO_AUTH_TOKEN` | *(optional)* | Twilio Auth Token. |
+| `TWILIO_PHONE_NUMBER` | *(optional)* | Twilio sender phone number. |
+| `GEMINI_API_KEY` | *(optional)* | Google Gemini API key for dynamic AI assistant queries. Safe offline rule-based triage fallback included. |
+| `EMERGENCY_PHONE_NUMBER` | `108` | National ambulance and emergency service dispatch phone number in India. |
 
 ---
 
-## 6. How to Install the PWA on a Phone or Desktop Browser
+## 6. How to Install the PWA on Mobile & Desktop
 
 **AAROGYASETU (आरोग्यसेतु)** is an installable Progressive Web App with `/manifest.json`, `/sw.js`, and home-screen icons:
 
 1. **Desktop (Google Chrome / Microsoft Edge):**
-   - Open `http://localhost:5173` (or `http://localhost:8000`).
-   - Click the **“Install App (PWA)”** button in the top header bar or the install icon on the right side of the browser address bar.
+   - Open `http://localhost:5173`.
+   - Click the **“Install App (PWA)”** button in the header bar or the install icon in the address bar.
 2. **Android Phone (Chrome / Edge):**
-   - Access the app over `localhost` (via USB port-forwarding `chrome://inspect`) or HTTPS, tap the browser menu (`⋮`), and choose **“Install app”** or **“Add to Home screen”**.
+   - Access the app over `localhost` or HTTPS, tap the browser menu (`⋮`), and choose **“Install app”** or **“Add to Home screen”**.
 3. **iPhone / iPad (Safari):**
    - Tap the **Share** button in Safari and select **“Add to Home Screen”**.
 
-> **Browser & Device Differences:** PWA installation prompts, standalone launch behavior, and capabilities vary by browser and operating system (for example, mobile browsers require `localhost` or `HTTPS` to activate Service Workers). For privacy, the Service Worker caches **only the static application shell** (`index.html`, CSS, JS, and icons) and **never caches sensitive patient profiles, consultation messages, or medical reports offline**.
-
----
-
-## 7. Troubleshooting
-
-- **PowerShell `npm.ps1 cannot be loaded because running scripts is disabled`:**
-  Use `npm.cmd install` and `npm.cmd run dev` instead of `npm`, or use the provided `start_frontend.bat` script.
-- **`node` or `npm` is not recognized in a new terminal:**
-  If Node.js is not in your global Windows `PATH`, run `start_frontend.bat` (which automatically adds the portable Node.js binary if present) or install Node.js LTS from `https://nodejs.org`.
-- **Port `8000` or `5173` is already in use:**
-  Stop any previous terminal running `uvicorn` or `vite`, or change the port with `--port 8001`.
-- **Resetting the local demo database:**
-  Stop the backend, delete `backend/aarogyasetu_m1.db`, and restart the backend—it will automatically recreate all tables and re-seed the fictional demo accounts (`Ramesh Kumar` and `Dr. Priya Sharma`).
+> **Privacy Note:** The Service Worker caches **only the static application shell** (`index.html`, CSS, JS, and icons) and **never caches sensitive patient profiles, consultation messages, or medical reports offline**.

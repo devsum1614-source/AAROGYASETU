@@ -27,6 +27,9 @@ export const App: React.FC = () => {
   const [simulateOffline, setSimulateOffline] = useState<boolean>(false);
   const isEffectiveOnline = browserOnline && !simulateOffline;
 
+  // Language state (English / Hindi bilingual support)
+  const [lang, setLang] = useState<'en' | 'hi'>('en');
+
   // PWA Install Prompt state
   const [deferredInstallPrompt, setDeferredInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
@@ -200,6 +203,30 @@ export const App: React.FC = () => {
           </div>
 
           <div className="header-controls">
+            {/* 2G Low Bandwidth Data Saver Indicator */}
+            <div
+              className="status-pill"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.12)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.25)',
+              }}
+              title="Client-side canvas compression and aggressive payload optimization active"
+            >
+              <span>⚡ 2G Data Saver</span>
+            </div>
+
+            {/* Bilingual Language Switcher */}
+            <button
+              type="button"
+              className="btn btn-outline-light"
+              style={{ fontWeight: 600 }}
+              onClick={() => setLang((prev) => (prev === 'en' ? 'hi' : 'en'))}
+              title="Toggle English / Hindi language"
+            >
+              🌐 {lang === 'en' ? 'हिंदी (HI)' : 'English (EN)'}
+            </button>
+
             {/* Online / Offline Status Pill */}
             <div
               className={`status-pill ${
@@ -305,6 +332,7 @@ export const App: React.FC = () => {
             user={user}
             onUserUpdated={setUser}
             isEffectiveOnline={isEffectiveOnline}
+            lang={lang}
           />
         ) : user.role === 'doctor' ? (
           <DoctorPortal
@@ -312,12 +340,14 @@ export const App: React.FC = () => {
             user={user}
             onUserUpdated={setUser}
             isEffectiveOnline={isEffectiveOnline}
+            lang={lang}
           />
         ) : (
           <ExaminerPortal
             token={token}
             user={user}
             isEffectiveOnline={isEffectiveOnline}
+            lang={lang}
           />
         )}
       </main>

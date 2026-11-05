@@ -55,6 +55,18 @@ ALLOWED_EMAIL_DOMAINS: list[str] = [
     if d.strip()
 ]
 
+# Configurable local emergency phone number (Default: "108" for India's rural medical ambulance)
+EMERGENCY_PHONE_NUMBER: str = os.environ.get("AAROGYASETU_EMERGENCY_PHONE", "108").strip()
+
+# Optional SMS Provider Credentials (Twilio). If not provided, Demo SMS Outbox is used.
+TWILIO_ACCOUNT_SID: str = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+TWILIO_AUTH_TOKEN: str = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+TWILIO_FROM_PHONE: str = os.environ.get("TWILIO_FROM_PHONE", "").strip()
+
+# Optional AI Provider Key (OpenAI / Gemini). If not provided, curated rural health guide is used.
+AI_API_KEY: str = os.environ.get("AAROGYASETU_AI_API_KEY", "").strip()
+AI_PROVIDER: str = os.environ.get("AAROGYASETU_AI_PROVIDER", "curated").strip().lower()
+
 # Failed login attempts rate limiting / temporary lockout parameters
 # Max 5 failed attempts per identifier within a 5-minute rolling window before a 10-minute lockout
 LOGIN_MAX_FAILED_ATTEMPTS: int = int(os.environ.get("AAROGYASETU_MAX_FAILED_LOGINS", "5"))
