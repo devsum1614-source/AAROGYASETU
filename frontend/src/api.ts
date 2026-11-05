@@ -113,7 +113,14 @@ export async function registerDoctorApi(payload: {
   languages_spoken: string;
   bio?: string;
   availability_slots?: string[];
-}): Promise<{ status: string; approval_status: string; message: string; user: UserAccount }> {
+}): Promise<{
+  status: string;
+  approval_status: string;
+  message: string;
+  user: UserAccount;
+  access_token: string;
+  token_type: string;
+}> {
   const res = await fetch(`${API_BASE}/api/auth/register/doctor`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

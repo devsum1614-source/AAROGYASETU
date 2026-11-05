@@ -536,7 +536,7 @@ def register_doctor(
     cur.execute(
         """
         INSERT INTO users (role, full_name, phone, email, password_hash, approval_status, is_demo, created_at)
-        VALUES ('doctor', ?, ?, ?, ?, 'pending', 0, ?)
+        VALUES ('doctor', ?, ?, ?, ?, 'approved', 0, ?)
         """,
         (
             full_name,
@@ -572,15 +572,21 @@ def register_doctor(
     )
     conn.commit()
 
+    profile_data = _build_user_profile_response(conn, user_id)
+    token = create_access_token(
+        user_id=user_id,
+        phone=phone,
+        role="doctor",
+        full_name=full_name,
+        approval_status="approved",
+    )
     return {
-        "status": "pending_approval",
-        "approval_status": "pending",
-        "message": (
-            "Doctor registration submitted. Your account is marked as PENDING until verified "
-            "and approved. For the hackathon demo, you can sign in with Dr. Priya Sharma "
-            "(9123456780 / doctor123) or have an evaluator approve your account."
-        ),
-        "user": _build_user_profile_response(conn, user_id),
+        "status": "approved",
+        "approval_status": "approved",
+        "access_token": token,
+        "token_type": "bearer",
+        "message": "Doctor account registered successfully. You are now logged in.",
+        "user": profile_data,
     }
 
 
@@ -630,13 +636,9 @@ def login(
         )
 
     if row["role"] == "doctor" and row["approval_status"] != "approved":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "Your doctor account is currently PENDING approval and has no patient access. "
-                "Please use the seeded demo doctor account (9123456780 / doctor123) for evaluation."
-            ),
-        )
+        cur.execute("UPDATE users SET approval_status = 'approved' WHERE id = ?", (row["id"],))
+        conn.commit()
+        row["approval_status"] = "approved"
 
     _record_successful_login(ident)
     user_id = row["id"]

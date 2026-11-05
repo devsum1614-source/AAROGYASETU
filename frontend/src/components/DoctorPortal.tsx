@@ -501,41 +501,6 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
 
   return (
     <div className="portal-container">
-      {/* Top Banner for Pending Doctor Approval */}
-      {user.approval_status === 'pending' && (
-        <div
-          className="alert alert-warning"
-          style={{
-            marginBottom: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <strong>Account Status: Pending Medical Council Verification.</strong>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
-              Your doctor account is awaiting administrative review. Clinical records and consultations will become active once verified.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={async () => {
-              try {
-                await approveDoctorApi(token, user.id);
-                alert('Doctor profile auto-approved for evaluation!');
-                window.location.reload();
-              } catch (e: any) {
-                alert(e?.message || 'Approval failed');
-              }
-            }}
-          >
-            Quick Approve (Demo)
-          </button>
-        </div>
-      )}
-
       {/* Global Success Banner */}
       {actionSuccess && (
         <div className="alert alert-success" style={{ marginBottom: 16 }}>

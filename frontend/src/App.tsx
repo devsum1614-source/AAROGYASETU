@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { fetchMyProfileApi, logoutApi } from './api';
 import { AuthView } from './components/AuthView';
 import { DoctorPortal } from './components/DoctorPortal';
-import { ExaminerPortal } from './components/ExaminerPortal';
 import { PatientPortal } from './components/PatientPortal';
 import { UserAccount } from './types';
 
@@ -91,11 +90,7 @@ export const App: React.FC = () => {
     setRouteGuardNotice(null);
     setToken(newToken);
     setUser(newUser);
-    if (newUser.role === 'examiner') {
-      window.location.hash = '#/examiner';
-    } else {
-      window.location.hash = newUser.role === 'doctor' ? '#/doctor' : '#/patient';
-    }
+    window.location.hash = newUser.role === 'doctor' ? '#/doctor' : '#/patient';
   };
 
   const handleSignOut = async () => {
@@ -121,10 +116,8 @@ export const App: React.FC = () => {
         if (
           rawHash.includes('patient') ||
           rawHash.includes('doctor') ||
-          rawHash.includes('examiner') ||
           rawPath.includes('/patient') ||
-          rawPath.includes('/doctor') ||
-          rawPath.includes('/examiner')
+          rawPath.includes('/doctor')
         ) {
           setRouteGuardNotice('Authentication required: Please sign in to access your portal.');
           window.history.replaceState(null, '', '#/login');
@@ -133,31 +126,22 @@ export const App: React.FC = () => {
       }
 
       if (user.role === 'patient') {
-        if (rawHash.includes('doctor') || rawHash.includes('examiner') || rawPath.includes('/doctor') || rawPath.includes('/examiner')) {
+        if (rawHash.includes('doctor') || rawPath.includes('/doctor')) {
           setRouteGuardNotice(
-            'Role Guard: Patient accounts cannot access Doctor or Examiner portals. Redirected to Patient Portal.'
+            'Role Guard: Patient accounts cannot access Doctor portal. Redirected to Patient Portal.'
           );
           window.history.replaceState(null, '', '#/patient');
         } else if (!rawHash.includes('patient')) {
           window.history.replaceState(null, '', '#/patient');
         }
       } else if (user.role === 'doctor') {
-        if (rawHash.includes('patient') || rawHash.includes('examiner') || rawPath.includes('/patient') || rawPath.includes('/examiner')) {
+        if (rawHash.includes('patient') || rawPath.includes('/patient')) {
           setRouteGuardNotice(
-            'Role Guard: Doctor accounts cannot access Patient or Examiner portals. Redirected to Doctor Portal.'
+            'Role Guard: Doctor accounts cannot access Patient portal. Redirected to Doctor Portal.'
           );
           window.history.replaceState(null, '', '#/doctor');
         } else if (!rawHash.includes('doctor')) {
           window.history.replaceState(null, '', '#/doctor');
-        }
-      } else if (user.role === 'examiner') {
-        if (rawHash.includes('patient') || rawHash.includes('doctor') || rawPath.includes('/patient') || rawPath.includes('/doctor')) {
-          setRouteGuardNotice(
-            'Role Guard: Examiner accounts operate in the read-only Examiner Portal.'
-          );
-          window.history.replaceState(null, '', '#/examiner');
-        } else if (!rawHash.includes('examiner')) {
-          window.history.replaceState(null, '', '#/examiner');
         }
       }
     };
@@ -287,12 +271,6 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Prototype & Fictional Data Notice */}
-      <div className="prototype-disclaimer-bar">
-        Hackathon Prototype (Milestone 1) • Uses fictional demo data only • Not
-        production-ready for real medical records.
-      </div>
-
       {/* Main Content */}
       <main className="main-container">
         {routeGuardNotice && (
@@ -334,18 +312,11 @@ export const App: React.FC = () => {
             isEffectiveOnline={isEffectiveOnline}
             lang={lang}
           />
-        ) : user.role === 'doctor' ? (
+        ) : (
           <DoctorPortal
             token={token}
             user={user}
             onUserUpdated={setUser}
-            isEffectiveOnline={isEffectiveOnline}
-            lang={lang}
-          />
-        ) : (
-          <ExaminerPortal
-            token={token}
-            user={user}
             isEffectiveOnline={isEffectiveOnline}
             lang={lang}
           />
