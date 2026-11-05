@@ -144,7 +144,7 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
       ? dp.availability_slots.join(', ')
       : 'Mon-Fri 09:00-13:00, Mon-Fri 16:00-19:00, Sat 10:00-14:00'
   );
-  const [isAccepting, setIsAccepting] = useState<boolean>(dp?.is_accepting ?? true);
+  const [isAccepting, setIsAccepting] = useState<boolean>(Boolean(dp?.is_accepting ?? 1));
   const [savingProfile, setSavingProfile] = useState<boolean>(false);
 
   // Load baseline doctor data
@@ -336,7 +336,7 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
   const handleAddOcrField = () => {
     setEditableOcrFields((prev) => [
       ...prev,
-      { parameter: 'New Parameter', value: '0', unit: '-', reference_range: 'Normal' },
+      { parameter: 'New Parameter', value: '0', unit: '-', reference: 'Normal', flag: 'normal' },
     ]);
   };
 
@@ -480,7 +480,7 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
   const requestedCount = appointments.filter((a) => a.status === 'requested').length;
   const confirmedCount = appointments.filter((a) => a.status === 'confirmed').length;
   const completedCount = appointments.filter((a) => a.status === 'completed').length;
-  const unreviewedOcrReports = reports.filter((r) => r.doctor_review_status === 'pending');
+  const unreviewedOcrReports = reports.filter((r) => !r.doctor_reviewed);
 
   const filteredAppointments = appointments.filter((a) => {
     if (appointmentFilter === 'all') return true;
@@ -688,42 +688,42 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span className="badge badge-success">TOKEN VERIFIED ACTIVE</span>
                   <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                    Expires: {new Date(qrLookupResult.expires_at).toLocaleString()}
+                    Expires: {new Date(qrLookupResult.patient_data.expires_at).toLocaleString()}
                   </span>
                 </div>
                 <div className="info-kv-grid">
                   <div className="info-kv-item">
                     <span className="info-kv-label">Patient Name</span>
-                    <span className="info-kv-value">{qrLookupResult.patient_summary.full_name}</span>
+                    <span className="info-kv-value">{qrLookupResult.patient_data.patient_name}</span>
                   </div>
                   <div className="info-kv-item">
                     <span className="info-kv-label">Age / Gender</span>
                     <span className="info-kv-value">
-                      {qrLookupResult.patient_summary.age || 'N/A'} yrs • {qrLookupResult.patient_summary.gender || 'N/A'}
+                      {qrLookupResult.patient_data.age || 'N/A'} yrs • {qrLookupResult.patient_data.gender || 'N/A'}
                     </span>
                   </div>
                   <div className="info-kv-item">
                     <span className="info-kv-label">Blood Group</span>
                     <span className="info-kv-value" style={{ color: '#b91c1c', fontWeight: 800 }}>
-                      {qrLookupResult.patient_summary.blood_group || 'Not specified'}
+                      {qrLookupResult.patient_data.blood_group || 'Not specified'}
                     </span>
                   </div>
                   <div className="info-kv-item">
                     <span className="info-kv-label">Emergency Contact</span>
                     <span className="info-kv-value">
-                      {qrLookupResult.patient_summary.emergency_contact_name} ({qrLookupResult.patient_summary.emergency_contact_phone})
+                      {qrLookupResult.patient_data.emergency_contact_name} ({qrLookupResult.patient_data.emergency_contact_phone})
                     </span>
                   </div>
                   <div className="info-kv-item" style={{ gridColumn: '1 / -1' }}>
                     <span className="info-kv-label">Known Allergies</span>
                     <span className="info-kv-value" style={{ color: '#b45309' }}>
-                      {qrLookupResult.patient_summary.allergies || 'None reported'}
+                      {qrLookupResult.patient_data.allergies || 'None reported'}
                     </span>
                   </div>
                   <div className="info-kv-item" style={{ gridColumn: '1 / -1' }}>
                     <span className="info-kv-label">Chronic Conditions</span>
                     <span className="info-kv-value">
-                      {qrLookupResult.patient_summary.chronic_conditions || 'None reported'}
+                      {qrLookupResult.patient_data.chronic_conditions || 'None reported'}
                     </span>
                   </div>
                 </div>
@@ -1035,7 +1035,11 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
                     </div>
                     <div className="info-kv-item">
                       <span className="info-kv-label">Emergency Contact</span>
-                      <span className="info-kv-value">{c.patient_emergency_contact || 'Available on file'}</span>
+                      <span className="info-kv-value">
+                        {c.patient_emergency_name
+                          ? `${c.patient_emergency_name} (${c.patient_emergency_phone || ''})`
+                          : 'Available on file'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1168,7 +1172,7 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
               >
                 {reports.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.title} ({r.doctor_review_status.toUpperCase()})
+                    {r.title} ({r.doctor_reviewed ? 'DOCTOR REVIEWED' : 'PENDING REVIEW'})
                   </option>
                 ))}
               </select>
@@ -1225,8 +1229,11 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
                 </div>
                 {selectedReport && (
                   <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 6 }}>
-                    Title: <strong>{selectedReport.title}</strong> • File: {selectedReport.file_name} •{' '}
-                    Status: <span className="badge badge-warning">{selectedReport.doctor_review_status.toUpperCase()}</span>
+                    Title: <strong>{selectedReport.title}</strong> • File: {selectedReport.original_filename} •{' '}
+                    Status:{' '}
+                    <span className={`badge ${selectedReport.doctor_reviewed ? 'badge-success' : 'badge-warning'}`}>
+                      {selectedReport.doctor_reviewed ? 'DOCTOR REVIEWED' : 'PENDING REVIEW'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1287,8 +1294,8 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
                               type="text"
                               className="form-control"
                               style={{ padding: '4px 6px', fontSize: '0.82rem' }}
-                              value={field.reference_range}
-                              onChange={(e) => handleOcrFieldChange(idx, 'reference_range', e.target.value)}
+                              value={field.reference}
+                              onChange={(e) => handleOcrFieldChange(idx, 'reference', e.target.value)}
                             />
                           </td>
                         </tr>
@@ -1628,7 +1635,7 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
                   fontSize: '0.82rem',
                 }}
               >
-                <strong>Patient Adherence Score:</strong> {adherenceSummary.percentage}% ({adherenceSummary.total_taken} of {adherenceSummary.total_scheduled} doses logged taken)
+                <strong>Patient Adherence Score:</strong> {adherenceSummary.adherence_rate_pct}% ({adherenceSummary.taken_count} of {adherenceSummary.total_logged} doses logged taken)
               </div>
             )}
           </div>
@@ -1905,7 +1912,9 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span className="badge badge-success">PROVIDER: {log.provider.toUpperCase()}</span>
+                      <span className="badge badge-success">
+                        MODE: {(log.delivery_mode || 'demo_log').toUpperCase()}
+                      </span>
                       <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
                         {new Date(log.created_at).toLocaleString()}
                       </span>
@@ -1917,7 +1926,7 @@ export const DoctorPortal: React.FC<DoctorPortalProps> = ({
                       {log.message_body}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 4 }}>
-                      Deduplication Key: <code>{log.deduplication_key}</code>
+                      Deduplication Key: <code>{log.dedupe_key}</code>
                     </div>
                   </div>
                 ))}
